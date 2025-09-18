@@ -87,6 +87,7 @@ class Car:
 
         # Update mask for pixel-perfect collisions
         self.mask = pygame.mask.from_surface(self.image)
+        self.angle=self.angle%360
         
      #---------------------debugging functions
     def draw_mask(self, screen, color=RED):
@@ -96,7 +97,7 @@ class Car:
         
     #----------------------heuristic retrieval function
     def calculate(self ,screen): #x=400,y=25, color=(123,123,123)):
-        "Calculate Manhattan distance heuristic for car"
+        "Calculate euclidean distance heuristic for car"
         finx,finy=(1042,150)
         
         distance=math.sqrt(((finx-self.rect.centerx)**2)+(finy-self.rect.centery)**2)
@@ -208,6 +209,50 @@ class Car:
         )
         surface.blit(coords_text, (300, 300))
         
+    def draw_sensor_rays(self, screen, boundary_mask=None, screen_width=None, screen_height=None):
+        """Draw sensor rays for debugging purposes with boundary collision detection"""
+        # Relative sensor angles (relative to car heading)
+        sensor_angles = [-90, -60, -45, -30, -20,10, 0,10,  20,30, 45,60,90]  
+        max_range = 300  
+        # Shift car angle so that 270° (right) becomes 0° forward
+        heading = (self.angle - 270) % 360
+
+        for sa in sensor_angles:
+            # Absolute ray angle in radians
+            ray_angle = math.radians((heading) - sa)  # -90 to align sprite starting at 270°
+            dx = math.cos(-ray_angle)
+            dy = math.sin(-ray_angle)
+
+            dist = max_range
+            if boundary_mask and screen_width and screen_height:
+                for d in range(1, max_range):  # fine step = pixel precision
+                    x = int(self.rect.centerx + dx * d)
+                    y = int(self.rect.centery + dy * d)
+
+                    # Out of bounds
+                    if not (0 <= x < screen_width and 0 <= y < screen_height):
+                        dist = d
+                        break
+
+                    # Boundary collision → check boundary
+                    if boundary_mask.get_at((x, y)) == 1:  # black = wall
+                        dist = d
+                        break
+
+            # End point of ray
+            end_x = self.rect.centerx + dx * dist
+            end_y = self.rect.centery + dy * dist
+            
+
+            # Draw the ray (green)
+            pygame.draw.line(screen, (0, 255, 0),
+                            (int(self.rect.centerx), int(self.rect.centery)),
+                            (int(end_x), int(end_y)), 2)
+
+            # Draw collision point (red dot)
+            pygame.draw.circle(screen, (255, 0, 0),
+                            (int(end_x), int(end_y)), 3)
+
     
     
     # ---------- Collision / Damage ----------
@@ -223,6 +268,20 @@ class Car:
             self.health = max(0, self.health - amount)
             self.last_collision_time = now
             
-   
+            
+    #------------debugging
+    def draw_angle(self, screen, font=None):
+        """Draw the car's current angle at its center"""
+        if font is None:
+            font = pygame.font.SysFont("Arial", 20)
+
+        # Render angle as text
+        angle_text = font.render(str(int(self.angle)), True, (255, 255, 0))  # yellow text
+        text_rect = angle_text.get_rect(center=self.rect.center)
+
+        # Blit onto the screen
+        screen.blit(angle_text, text_rect)
+
+    
 
             

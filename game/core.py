@@ -68,11 +68,12 @@ class Game:
             self.track.draw(self.screen)
             draw_mouse_debug(self.screen)
            
-
             # Always draw cars
             self.player.draw(self.screen)
             #self.player.display_dist(self.screen)
             #self.player.draw_mask(self.screen)
+            self.player.draw_angle(self.screen)
+            self.player.draw_sensor_rays(self.screen,self.track.boundary_mask,screen_width=SCREEN_WIDTH,screen_height=SCREEN_HEIGHT)
             if self.twoPlayer:
                 self.player2.draw(self.screen)
                 

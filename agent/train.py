@@ -8,7 +8,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
-from env import car_race_env 
+from env import car_race_env_lidar 
 # ------------------------
 # Custom Callback for Logging & Checkpoints
 # ------------------------
@@ -81,7 +81,7 @@ class RaceLoggerCallback(BaseCallback):
 # Train
 # ------------------------
 def make_env():
-    trainenv = car_race_env.CarRaceEnv(render_mode="human")  # No rendering during training
+    trainenv = car_race_env_lidar.CarRaceEnvLidar(render_mode="human")  # No rendering during training
     trainenv = Monitor(trainenv)  # Wrap with Monitor for better logging
     return trainenv
 
@@ -101,8 +101,8 @@ if __name__ == "__main__":
         verbose=1,
         batch_size=256,
         n_steps=2048,
-        learning_rate=3e-4,
-        ent_coef=0.01,  # Encourage exploration
+        learning_rate=3e-2,
+        ent_coef=0.1,  # Encourage exploration
         clip_range=0.2,
         tensorboard_log="./tb_logs"  # for tensorboard monitoring
     )

@@ -155,3 +155,11 @@ Player: 4.35 seconds
 Player: 4.35 seconds
 Player: 4.22 seconds
 Player 2: 4.25 seconds
+Player: 11.47 seconds
+Player: 19.73 seconds
+Player: 11.28 seconds
+Player: 18.57 seconds
+Player: 7.13 seconds
+Player: 5.60 seconds
+Player: 6.40 seconds
+Player: 47.48 seconds

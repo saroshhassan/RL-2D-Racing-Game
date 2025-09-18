@@ -20,7 +20,7 @@ class Car:
         self.free_deceleration = 0.05
         self.angle = 270  # 0 = facing up, positive = clockwise
         self.last_collision_time = 0.0
-        self.collision_cooldown = 0.1
+        self.collision_cooldown = 0.5
         self.timer = RaceTimer()
         self.debug_font = pygame.font.SysFont("Arial", 20)  
         self.boundary_collision_flag=False
@@ -211,7 +211,7 @@ class Car:
         )
         surface.blit(coords_text, (300, 300))
         
-    def draw_sensor_rays(self, screen, boundary_mask=None, screen_width=None, screen_height=None):
+    def draw_sensor_rays(self, screen, boundary_mask=None, opponent_mask=None, screen_width=None, screen_height=None):
         """Draw sensor rays for debugging purposes with boundary collision detection"""
         # Relative sensor angles (relative to car heading)
         sensor_angles = [-90, -60, -45, -30, -20,10, 0,10,  20,30, 45,60,90]  
@@ -239,6 +239,9 @@ class Car:
                     # Boundary collision → check boundary
                     if boundary_mask.get_at((x, y)) == 1:  # black = wall
                         dist = d
+                        break
+                    if opponent_mask and opponent_mask.get_at ((x,y))==1 : #touch opponent
+                        dist=d
                         break
 
             # End point of ray

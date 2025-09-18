@@ -4,6 +4,7 @@ import csv
 import sys
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import VecNormalize
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,6 +36,7 @@ class RaceLoggerCallback(BaseCallback):
         # Get info from the environment
         infos = self.locals.get("infos", [{}])
         dones = self.locals.get("dones", [False])
+
         rewards = self.locals.get("rewards", [0])
         
         for i, (info, done, reward) in enumerate(zip(infos, dones, rewards)):
@@ -81,9 +83,17 @@ class RaceLoggerCallback(BaseCallback):
 # Train
 # ------------------------
 def make_env():
-    trainenv = car_race_env_lidar.CarRaceEnvLidar(render_mode="human")  # No rendering during training
-    trainenv = Monitor(trainenv)  # Wrap with Monitor for better logging
-    return trainenv
+    def _init():
+        env = car_race_env_lidar.CarRaceEnvLidar()
+        env = Monitor(env)   # ✅ Monitor first
+        return env
+    return _init
+
+# Wrap in DummyVecEnv
+env = DummyVecEnv([make_env()])
+
+# Apply VecNormalize
+env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
 
 if __name__ == "__main__":
     print("Starting Car Race AI Training...")
@@ -92,7 +102,7 @@ if __name__ == "__main__":
     os.makedirs("logs", exist_ok=True)
 
     # Create vectorized environment
-    env = DummyVecEnv([make_env])
+    #env = DummyVecEnv([make_env])
 
     # Create PPO model
     model = PPO(
@@ -101,7 +111,7 @@ if __name__ == "__main__":
         verbose=1,
         batch_size=256,
         n_steps=2048,
-        learning_rate=3e-2,
+        learning_rate=3e-4,
         ent_coef=0.1,  # Encourage exploration
         clip_range=0.2,
         tensorboard_log="./tb_logs"  # for tensorboard monitoring

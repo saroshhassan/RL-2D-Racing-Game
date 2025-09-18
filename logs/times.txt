@@ -163,3 +163,7 @@ Player: 7.13 seconds
 Player: 5.60 seconds
 Player: 6.40 seconds
 Player: 47.48 seconds
+Player: 4.71 seconds
+Player: 5.35 seconds
+Player: 4.45 seconds
+Player: 7.95 seconds

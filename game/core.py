@@ -102,9 +102,11 @@ class Game:
                 
                 if self.cpu:
                     # CPU with RL policy
-                    obs = make_obs(self.cpu, self.player, SCREEN_WIDTH, SCREEN_HEIGHT)
+                    obs = make_obs(self.cpu, self.track, SCREEN_WIDTH, SCREEN_HEIGHT)
                     obs = np.expand_dims(obs, axis=0)  # add batch dimension
-                    action, _ = self.cpu_model.predict(obs, deterministic=True)
+                    #action, _ = self.cpu_model.predict(obs, deterministic=True)
+                    action, _ = self.cpu_model.predict(obs.squeeze(), deterministic=True)
+
                     action = np.array(action).flatten()
 
                     if action.shape[0] != 2:

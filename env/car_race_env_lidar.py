@@ -85,7 +85,7 @@ class CarRaceEnvLidar(Env):
 
         for sa in sensor_angles:
             ray_angle = math.radians(a.angle + sa)
-            dx, dy = math.cos(ray_angle), math.sin(ray_angle)
+            dx, dy = math.cos(-ray_angle), math.sin(-ray_angle)
 
             dist = max_range
             hit = 0
@@ -102,7 +102,10 @@ class CarRaceEnvLidar(Env):
 
             obs.append(dist / max_range)  # normalized distance
             obs.append(hit)               # 1 = collision boundary, 0 = free
-
+        
+            
+            
+        obs= np.nan_to_num(obs, nan=0.0, posinf=1.0, neginf=-1.0)     
         return np.array(obs, dtype=np.float32)
 
     # -------------------------------
@@ -125,7 +128,7 @@ class CarRaceEnvLidar(Env):
         # Checkpoint progression
         if self.current_target:
             dist = self.agent.calculate(self.current_target)  # uses same formula
-            if dist < 250:
+            if dist < 100:
                 reward += 20.0
                 self.overtaken_cp.append(self.current_target)
                 self.total_cp.pop(0)
@@ -137,16 +140,19 @@ class CarRaceEnvLidar(Env):
 
         # Finish reward
         if self.check_finish and not self.total_cp:
-            reward += 100.0
+            reward += 10000.0
             done = True
             info["lap_completed"] = True
 
         # Alive reward
         reward += 0.01
-        reward += self.agent.speed * 0.5  # encourage speed
+        reward += self.agent.speed * 20  # encourage speed
+        
+       
+        
 
         if self.agent.health <= 0:
-            reward -= 20.0
+            reward -= 2000.0
             done = True
             info["crashed"] = True
 
@@ -154,6 +160,11 @@ class CarRaceEnvLidar(Env):
         if self.steps > 2000:
             done = True
             info["timeout"] = True
+            
+         #Sanity checks
+
+        #assert np.all(np.isfinite(self._get_obs)), f"Invalid obs: {self._get_obs}"
+        #assert np.isfinite(reward), f"Invalid reward: {reward}"
 
         return self._get_obs(), float(reward), bool(done), False, info
 

@@ -73,7 +73,7 @@ class CarRaceEnv(Env):
         self.steps = 0
         return self._get_obs(), {}
 
-    def _get_obs(self):
+    """def _get_obs(self):
         a = self.agent
         o = self.opponent
         
@@ -90,7 +90,49 @@ class CarRaceEnv(Env):
             math.cos(math.radians(o.angle)),
             o.speed / self.max_speed
         ], dtype=np.float32)
-        return obs
+        return obs"""#this observation func takes the opponent dir as input for observation
+    def _get_obs(self):
+        """Returns observation of agent by raycast"""
+        a = self.agent
+
+        # --- Car state ---
+        obs = [
+            (a.rect.centerx / self.width - 0.5) * 2,   # normalized X position
+            (a.rect.centery / self.height - 0.5) * 2,  # normalized Y position
+            math.sin(math.radians(a.angle)),           # heading (sin)
+            math.cos(math.radians(a.angle)),           # heading (cos)
+            a.speed / self.max_speed                   # normalized speed
+        ]
+
+        # --- Track-relative info ---
+        # Sample distances from car center in several directions (like "virtual sensors")
+        sensor_angles = [-45, -20, 0, 20, 45]  # degrees relative to car heading
+        max_range = 300                         # how far sensors can "see"
+        
+        for sa in sensor_angles:
+            # Absolute angle in radians
+            ray_angle = math.radians(a.angle + sa)
+            dx = math.cos(ray_angle)
+            dy = math.sin(ray_angle)
+
+            dist = max_range
+            for d in range(1, max_range, 5):  # step ray outward
+                x = int(a.rect.centerx + dx * d)
+                y = int(a.rect.centery + dy * d)
+
+                if not (0 <= x < self.width and 0 <= y < self.height):
+                    dist = d
+                    break
+
+                # Check collision with boundary (off-road pixels)
+                if self.boundary_mask.get_at((x, y)) == 1:  # assuming mask is binary
+                    dist = d
+                    break
+
+            obs.append(dist / max_range)  # normalize
+
+        return np.array(obs, dtype=np.float32)
+
 
     def step(self, action):
         action = np.clip(action, -1.0, 1.0)

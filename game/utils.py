@@ -15,6 +15,11 @@ def log_lap_time(player_name, lap_time, filename="logs/times.txt"):
     os.makedirs("logs", exist_ok=True)  # ensure logs directory exists
     with open(filename, "a") as f:
         f.write(f"{player_name}: {lap_time:.2f} seconds\n")
+        
+"""def log_lap_actions(player_name, lap_time, filename="dataset/v1.txt"):
+    os.makedirs("dataset",exist_ok=True)
+    with open(filename, "a") as f:
+        f.write(f{"player_name"}:  )"""
 
 class RaceTimer:
     def __init__(self, font=None):

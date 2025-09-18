@@ -103,21 +103,21 @@ class Game:
                 if self.cpu:
                     # CPU with RL policy
                     obs = make_obs(self.cpu, self.track, SCREEN_WIDTH, SCREEN_HEIGHT)
-                    obs = np.expand_dims(obs, axis=0)  # add batch dimension
+                    #obs = np.expand_dims(obs, axis=0)  # add batch dimension
                     #action, _ = self.cpu_model.predict(obs, deterministic=True)
-                    action, _ = self.cpu_model.predict(obs.squeeze(), deterministic=True)
+                    #action, _ = self.cpu_model.predict(obs, deterministic=True)
 
-                    action = np.array(action).flatten()
+                    #action = np.array(action).flatten()
 
-                    if action.shape[0] != 2:
-                         raise ValueError(f"Expected action of shape (2,), got {action.shape} with value {action}")
+                    #if action.shape[0] != 2:
+                    #     raise ValueError(f"Expected action of shape (2,), got {action.shape} with value {action}")
 
-                    steer, accel = float(action[0]), float(action[1])
+                    #steer, accel = float(action[0]), float(action[1])
                     #^^^correctly unpacked?
                     # convert action into car commands REMINDER UNDERSCORE WAS ADDED AS CHECK
                     #steer, accel = action
-                    cpu_keys = _action_to_keys(steer, accel)
-                    self.cpu.move(cpu_keys)
+                    #cpu_keys = _action_to_keys(steer, accel)
+                    self.cpu.cpu_move(obs,self.cpu_model)
                     
                 
                 if self.player2 and check_collision(self.player,self.player2):

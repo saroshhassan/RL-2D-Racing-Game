@@ -120,14 +120,21 @@ class CarRaceEnvLidar(Env):
         reward, done = 0.0, False
         info = {}
 
+        # Get LIDAR data for navigation rewards
+        lidar_distances, lidar_hits = self._get_lidar_data()
+        
+        # LIDAR-based navigation rewards
+        lidar_reward = self._calculate_lidar_reward(lidar_distances, lidar_hits, steer)
+        reward += lidar_reward
+        
         # Collision penalty
         if check_boundary_collision(self.agent, self.track):
             self.agent.collide()
-            reward -= 3.0
+            reward -= 10.0  # Increased penalty for hitting walls
 
-        # Checkpoint progression
+        # Checkpoint progression (existing code)
         if self.current_target:
-            dist = self.agent.calculate(self.current_target)  # uses same formula
+            dist = self.agent.calculate(self.current_target)
             if dist < 100:
                 reward += 20.0
                 self.overtaken_cp.append(self.current_target)
@@ -140,19 +147,18 @@ class CarRaceEnvLidar(Env):
 
         # Finish reward
         if self.check_finish and not self.total_cp:
-            reward += 10000.0
+            reward += 1000.0
             done = True
             info["lap_completed"] = True
 
+        # Speed reward (encourage forward movement)
+        reward += self.agent.speed * 0.1
+        
         # Alive reward
         reward += 0.01
-        reward += self.agent.speed * 20  # encourage speed
-        
-       
-        
 
         if self.agent.health <= 0:
-            reward -= 2000.0
+            reward -= 100.0
             done = True
             info["crashed"] = True
 
@@ -160,13 +166,96 @@ class CarRaceEnvLidar(Env):
         if self.steps > 2000:
             done = True
             info["timeout"] = True
-            
-         #Sanity checks
-
-        #assert np.all(np.isfinite(self._get_obs)), f"Invalid obs: {self._get_obs}"
-        #assert np.isfinite(reward), f"Invalid reward: {reward}"
 
         return self._get_obs(), float(reward), bool(done), False, info
+    
+    #------------get lidar info
+    def _get_lidar_data(self):
+        """Extract LIDAR distances and hit flags from current observation"""
+        a = self.agent
+        sensor_angles = np.linspace(-90, 90, self.n_beams)
+        max_range = 300
+        
+        distances = []
+        hits = []
+        
+        for sa in sensor_angles:
+            ray_angle = math.radians(a.angle + sa)
+            dx, dy = math.cos(-ray_angle), math.sin(-ray_angle)
+
+            dist = max_range
+            hit = 0
+            
+            for d in range(1, max_range, 3):
+                x = int(a.rect.centerx + dx * d)
+                y = int(a.rect.centery + dy * d)
+
+                if not (0 <= x < self.width and 0 <= y < self.height):
+                    dist, hit = d, 1
+                    break
+                if self.track.boundary_mask.get_at((x, y)) == 1:
+                    dist, hit = d, 1
+                    break
+            
+            distances.append(dist)
+            hits.append(hit)
+        
+        return distances, hits
+    
+    #------------get lidar rewards
+    def _calculate_lidar_reward(self, distances, hits, steer_action):
+        """
+        Calculate reward based on LIDAR navigation strategy:
+        1. Follow the longest clear (non-hitting) LIDAR line
+        2. If all lines are hitting, still follow the longest one
+        """
+        distances = np.array(distances)
+        hits = np.array(hits)
+        
+        # Sensor angles relative to car heading (-90 to +90 degrees)
+        sensor_angles = np.linspace(-90, 90, len(distances))
+        
+        # Find clear paths (hit = 0)
+        clear_mask = (hits == 0)
+        
+        if np.any(clear_mask):
+            # Case 1: There are clear paths, follow the longest clear one
+            clear_distances = distances.copy()
+            clear_distances[~clear_mask] = 0  # Zero out blocked paths
+            
+            # Find the angle of the longest clear path
+            best_clear_idx = np.argmax(clear_distances)
+            target_angle = sensor_angles[best_clear_idx]
+            
+            reward_multiplier = 2.0  # Higher reward for following clear paths
+        else:
+            # Case 2: All paths are blocked, follow the longest one anyway
+            best_blocked_idx = np.argmax(distances)
+            target_angle = sensor_angles[best_blocked_idx]
+            
+            reward_multiplier = 0.5  # Lower reward when all paths blocked
+        
+        # Calculate steering reward based on how well the action follows the best path
+        # Convert target_angle to steering action (-1 to 1)
+        # -90° → steer left (-1), 0° → straight (0), +90° → steer right (+1)
+        target_steer = np.clip(target_angle / 90.0, -1.0, 1.0)
+        
+        # Reward for steering towards the best path
+        steer_error = abs(steer_action - target_steer)
+        steer_reward = (1.0 - steer_error) * reward_multiplier
+        
+        # Bonus for following longer paths
+        max_distance = max(distances)
+        distance_bonus = (max_distance / 300.0) * 0.5  # normalized distance bonus
+        
+        # Additional reward for maintaining distance from walls
+        min_side_distance = min(distances[0], distances[-1])  # leftmost and rightmost sensors
+        wall_clearance_reward = (min_side_distance / 300.0) * 0.3
+        
+        total_reward = steer_reward + distance_bonus + wall_clearance_reward
+        
+        return total_reward
+
 
     # -------------------------------
     def _action_to_keys(self, steer, accel):

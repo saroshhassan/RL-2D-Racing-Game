@@ -96,9 +96,9 @@ class Car:
         screen.blit(mask_surf, (self.rect.left,self.rect.top))
         
     #----------------------heuristic retrieval function
-    def calculate(self ,screen): #x=400,y=25, color=(123,123,123)):
+    def calculate(self , point): #x=400,y=25, color=(123,123,123)):
         "Calculate euclidean distance heuristic for car"
-        finx,finy=(1042,150)
+        finx,finy=point
         
         distance=math.sqrt(((finx-self.rect.centerx)**2)+(finy-self.rect.centery)**2)
         #text=f"Manhattan Distance to finish: {distance}"
@@ -161,6 +161,8 @@ class Car:
     model: trained PPO model
         """
          # Flatten to ensure shape is always (2,)
+        
+        action,_ = model.predict(obs,deterministic=True)
         action = np.array(action).flatten()
         steer, accel = float(action[0]), float(action[1])
 

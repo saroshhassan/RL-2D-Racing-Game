@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.13.3-blue?logo=python&logoColor=white)  
 ![Pygame](https://img.shields.io/badge/Pygame-2.6.0-green?logo=pygame&logoColor=white)  
-![RL](https://img.shields.io/badge/Reinforcement%20Learning-StableBaselines3-orange?logo=openai&logoColor=white)  
+![RL](https://img.shields.io/badge/RL-Library-SB3-orange)  
 ![Status](https://img.shields.io/badge/Status-Active-success)  
 
 A **2D racing game** built in Python using **Pygame**. This project demonstrates integration of classic game mechanics with reinforcement learning concepts. The player competes against a CPU-controlled car powered by an RL agent, racing on predefined tracks while avoiding obstacles and tracking performance.  

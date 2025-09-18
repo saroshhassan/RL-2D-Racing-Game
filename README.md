@@ -1,64 +1,42 @@
- 2D Car Racing Game
+# 🏎 2D Car Racing Game  
 
-A simple 2D racing game built in Python using Pygame. The game allows a player to race against a CPU-controlled car on a predefined track with obstacles, timers, and progress tracking.
+![Python](https://img.shields.io/badge/Python-3.13.3-blue?logo=python&logoColor=white)  
+![Pygame](https://img.shields.io/badge/Pygame-2.6.0-green?logo=pygame&logoColor=white)  
+![RL](https://img.shields.io/badge/Reinforcement%20Learning-StableBaselines3-orange?logo=openai&logoColor=white) 
+![Status](https://img.shields.io/badge/Status-Active-success)  
 
- Features
+A **2D racing game** built in Python using **Pygame**. This project demonstrates integration of classic game mechanics with reinforcement learning concepts. The player competes against a CPU-controlled car powered by an RL agent, racing on predefined tracks while avoiding obstacles and tracking performance.  
 
- Player Car – controlled via keyboard (arrow keys or WASD).
+---
 
- CPU Car – follows a pre-defined path or AI logic.
+## Features  
 
- Track – start and finish lines with a grey boundary that must be avoided.
+- **Player Car** – Control with keyboard (arrow keys or WASD).  
+- **CPU Car** – Driven by a reinforcement learning (RL) agent.  
+- **Track** – Includes start/finish lines with a grey boundary to avoid.  
+- **Timer System** – Displays race time for both cars.  
+- **Collision Detection** – Cars passing into grey areas take damage.  
 
- Timer System – displays race time for both cars.
+---
 
- Progress Bars – show each car’s advancement along the track.
+## Controls  
 
- Collision Detection – cars can’t pass through the grey areas.
+- **Arrow Keys / WASD** → Steer & accelerate the player car  
+- **Q** → Quit the game  
 
- Controls
+---
 
-Arrow Keys / WASD: Steer and accelerate the player car.
+##  Installation  
 
-Q: Quit the game.
+To get your game running:  
 
- Installation
-
-Clone this repository:
-
-git clone https://github.com/your-username/2d-car-racing.git
-cd 2d-car-racing
-
-
-Install dependencies:
-
-pip install requirements
+```bash
+git clone https://github.com/your-username/RL-2D-Racing-Game.git
+cd RL-2D-Racing-Game
 
 
-Run the game:
+pip install -r requirements.txt
 
 python main.py
+```
 
-
-Future Improvements
-
->Add better CPU AI to follow the track smoothly.
-
->Include multiple tracks and difficulty levels.
-
->Add sound effects and background music.
-
->Implement a scoreboard or lap system.
-
- Technologies Used
-
-Python 3.x
-
-Pygame
-
-StableBaselines3
-
- License
-
-This project is open-source and available under the MIT License.
-  

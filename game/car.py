@@ -12,7 +12,7 @@ class Car:
         self.width = width
         self.height = height
         self.is_cpu = is_cpu
-        self.health = 100
+        self.health = 1000
         self.speed = 0
         self.max_speed = 10
         self.acceleration = 0.2

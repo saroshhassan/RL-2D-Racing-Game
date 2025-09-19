@@ -131,14 +131,17 @@ if __name__ == "__main__":
         batch_size=512,
         n_steps=4096,
         learning_rate=3e-4,
-        ent_coef=0.1,  # Encourage exploration
+        n_epochs=20,
+        ent_coef=0.5,  # Encourage exploration
         clip_range=0.2,
+        use_sde=True,
+        device='cpu',
         tensorboard_log="./tb_logs"  # for tensorboard monitoring
     )
 
     # Create callback
     callback = RaceLoggerCallback(
-        save_freq=50000,  # checkpoint every 50k steps
+        save_freq=20000,  # checkpoint every 20k steps
         save_path="models/checkpoints",
         log_path="logs/training_log.csv",
         verbose=1

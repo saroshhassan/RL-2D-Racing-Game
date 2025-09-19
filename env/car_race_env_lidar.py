@@ -303,7 +303,7 @@ class CarRaceEnvLidar(Env):
             best_idx_within = candidate_indices[np.argmax(candidate_distances)]
 
             target_angle = sensor_angles[best_idx_within]
-            
+        
             reward_multiplier=2.5 
             
         else:
@@ -316,7 +316,7 @@ class CarRaceEnvLidar(Env):
         # Calculate steering reward based on how well the action follows the best path
         # Convert target_angle to steering action (-1 to 1)
         # -90° → steer left (-1), 0° → straight (0), +90° → steer right (+1)
-        target_steer = np.clip(target_angle / 90.0, -1.0, 1.0)
+        target_steer = (target_angle / 90.0)
         
         # Reward for steering towards the best path
         steer_error = abs(steer_action - target_steer)

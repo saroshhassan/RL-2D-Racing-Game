@@ -71,7 +71,7 @@ class RaceTimer:
 def _action_to_keys(steer, accel):
         """Convert continuous actions to discrete key presses"""
         keys = {}
-        
+        #.
         # Acceleration/braking
         if accel > 0.1:
             keys[pygame.K_UP] = True

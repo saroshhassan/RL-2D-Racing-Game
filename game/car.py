@@ -27,6 +27,7 @@ class Car:
         self.finish_dist=0
         self.controls=control
         self.distance=0
+        self.start_flag=0
         
         if image_path:
             self.base_image = pygame.image.load(image_path).convert_alpha()

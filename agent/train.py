@@ -1,9 +1,11 @@
 #train loop
 import os
 import csv
+import time
 import sys
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import subproc_vec_env
 from stable_baselines3.common.vec_env import VecNormalize
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
@@ -33,6 +35,23 @@ class RaceLoggerCallback(BaseCallback):
                                 "agent_hp", "opponent_hp", "lap_completed", "crashed"])
 
     def _on_step(self) -> bool:
+        if self.num_timesteps % 5 == 0:
+            # Access the underlying environment and render it
+            try:
+                # Get the base environment from the vectorized wrapper
+                base_env = self.training_env.envs[0].env  # DummyVecEnv -> Monitor -> CarRaceEnv
+                while hasattr(base_env, 'env'):  # Unwrap if needed
+                    base_env = base_env.env
+                
+                base_env.render()
+                time.sleep(0.02)  # Small delay to see what's happening
+                
+            except Exception as e:
+                if self.verbose:
+                    print(f"Render failed: {e}")
+                    
+                    
+                    ##^^38-51 render env
         # Get info from the environment
         infos = self.locals.get("infos", [{}])
         dones = self.locals.get("dones", [False])
@@ -84,7 +103,7 @@ class RaceLoggerCallback(BaseCallback):
 # ------------------------
 def make_env():
     def _init():
-        env = car_race_env_lidar.CarRaceEnvLidar()
+        env = car_race_env_lidar.CarRaceEnvLidar(render_mode="human")
         env = Monitor(env)   # ✅ Monitor first
         return env
     return _init
@@ -109,8 +128,8 @@ if __name__ == "__main__":
         "MlpPolicy",
         env,
         verbose=1,
-        batch_size=256,
-        n_steps=2048,
+        batch_size=512,
+        n_steps=4096,
         learning_rate=3e-4,
         ent_coef=0.1,  # Encourage exploration
         clip_range=0.2,

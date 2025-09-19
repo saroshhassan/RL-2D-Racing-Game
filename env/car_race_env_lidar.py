@@ -296,7 +296,7 @@ class CarRaceEnvLidar(Env):
             nearest_car_idx=np.argmin(car_distances)
             opp_idx= (nearest_car_idx + self.n_beams // 2) % self.n_beams
             search_window = 5  # number of beams on each side to consider
-            candidate_indices = [(opp_idx + i) % N for i in range(-search_window, search_window+1)]
+            candidate_indices = [(opp_idx + i) % self.n_beams for i in range(-search_window, search_window+1)]
 
             # Step 4: Pick the longest clear distance among candidates
             candidate_distances = distances[candidate_indices]

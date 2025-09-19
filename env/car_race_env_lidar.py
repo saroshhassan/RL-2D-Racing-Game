@@ -42,6 +42,7 @@ class CarRaceEnvLidar(Env):
         # Track and cars
         self.track = track.Track()
         self.agent = car.Car(90, 715, image_path="assets/car/car2.png", is_cpu=True)
+        
         self.max_speed = 8.0
 
         # Checkpoint system
@@ -67,7 +68,7 @@ class CarRaceEnvLidar(Env):
         return self._get_obs(), {}
 
     # -------------------------------
-    def _get_obs(self):
+    def _get_obs(self,opp_agent=None):
         """Return state vector: [car state + lidar]"""
         a = self.agent
         obs = [
@@ -78,6 +79,7 @@ class CarRaceEnvLidar(Env):
             a.speed / self.max_speed,
             self.agent.timer.get_time() / 100.0  # normalize time
         ]
+        opp_agent=opp_agent
 
         # LIDAR beams
         sensor_angles = np.linspace(-90, 90, self.n_beams)  # relative to heading
@@ -93,15 +95,34 @@ class CarRaceEnvLidar(Env):
                 x = int(a.rect.centerx + dx * d)
                 y = int(a.rect.centery + dy * d)
 
-                if not (0 <= x < self.width and 0 <= y < self.height):
+                if not (0 <= x < self.width and 0 <= y < self.height): #bound detection
                     dist, hit = d, 1
                     break
                 if self.track.boundary_mask.get_at((x, y)) == 1:
                     dist, hit = d, 1
                     break
+                
+                # Opponent collision check
+                if opp_agent:
+                    opponent_rect=opp_agent.rect
+                    opponent_mask=opp_agent.mask
+                    
+                        # Check if the ray point is within the opponent's rect
+                    if opponent_rect.collidepoint(x, y):
+                            # Convert screen coordinates to opponent's local mask coordinates
+                        local_x = x - opponent_rect.x
+                        local_y = y - opponent_rect.y
+                            
+                            # Make sure the local coordinates are within mask bounds
+                        if (0 <= local_x < opponent_mask.get_size()[0] and 
+                            0 <= local_y < opponent_mask.get_size()[1]):
+                            if opponent_mask.get_at((local_x, local_y)) == 1:
+                                dist,hit = d,2
+                                break
+            
 
             obs.append(dist / max_range)  # normalized distance
-            obs.append(hit)               # 1 = collision boundary, 0 = free
+            obs.append(hit)               # 2=opponent car, 1 = collision boundary, 0 = free
         
             
             
@@ -170,9 +191,12 @@ class CarRaceEnvLidar(Env):
         return self._get_obs(), float(reward), bool(done), False, info
     
     #------------get lidar info
-    def _get_lidar_data(self):
+    def _get_lidar_data(self,opp_agent=None):
         """Extract LIDAR distances and hit flags from current observation"""
         a = self.agent
+        opp_agent=opp_agent
+
+
         sensor_angles = np.linspace(-90, 90, self.n_beams)
         max_range = 300
         
@@ -196,6 +220,23 @@ class CarRaceEnvLidar(Env):
                 if self.track.boundary_mask.get_at((x, y)) == 1:
                     dist, hit = d, 1
                     break
+                # Opponent collision check
+                if opp_agent:
+                    opponent_rect=opp_agent.rect
+                    opponent_mask=opp_agent.mask
+                    
+                        # Check if the ray point is within the opponent's rect
+                    if opponent_rect.collidepoint(x, y):
+                            # Convert screen coordinates to opponent's local mask coordinates
+                        local_x = x - opponent_rect.x
+                        local_y = y - opponent_rect.y
+                            
+                            # Make sure the local coordinates are within mask bounds
+                        if (0 <= local_x < opponent_mask.get_size()[0] and 
+                            0 <= local_y < opponent_mask.get_size()[1]):
+                            if opponent_mask.get_at((local_x, local_y)) == 1:
+                                dist,hit = d,2
+                                break
             
             distances.append(dist)
             hits.append(hit)
@@ -233,7 +274,7 @@ class CarRaceEnvLidar(Env):
             best_blocked_idx = np.argmax(distances)
             target_angle = sensor_angles[best_blocked_idx]
             
-            reward_multiplier = 0.5  # Lower reward when all paths blocked
+            reward_multiplier = 1.5  # Lower reward when all paths blocked
         
         # Calculate steering reward based on how well the action follows the best path
         # Convert target_angle to steering action (-1 to 1)
@@ -250,7 +291,7 @@ class CarRaceEnvLidar(Env):
         
         # Additional reward for maintaining distance from walls
         min_side_distance = min(distances[0], distances[-1])  # leftmost and rightmost sensors
-        wall_clearance_reward = (min_side_distance / 300.0) * 0.3
+        wall_clearance_reward = (min_side_distance / 300.0) * 5
         
         total_reward = steer_reward + distance_bonus + wall_clearance_reward
         

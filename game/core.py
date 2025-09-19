@@ -73,12 +73,15 @@ class Game:
             #self.player.display_dist(self.screen)
             #self.player.draw_mask(self.screen)
             self.player.draw_angle(self.screen)
-            self.player.draw_sensor_rays(screen=self.screen,boundary_mask=self.track.boundary_mask, opponent_mask=self.player2.mask, screen_width=SCREEN_WIDTH,screen_height=SCREEN_HEIGHT)
             if self.twoPlayer:
                 self.player2.draw(self.screen)
+                self.player.draw_sensor_rays(screen=self.screen,boundary_mask=self.track.boundary_mask, opponent_mask=self.player2.mask, opponent_rect=self.player2.rect, screen_width=SCREEN_WIDTH,screen_height=SCREEN_HEIGHT)
+            
                 
             if self.cpu:
                 self.cpu.draw(self.screen)
+                self.player.draw_sensor_rays(screen=self.screen,boundary_mask=self.track.boundary_mask, opponent_mask=self.cpu.mask, opponent_rect=self.cpu.rect, screen_width=SCREEN_WIDTH,screen_height=SCREEN_HEIGHT)
+            
                 
 
             # Always draw HUD

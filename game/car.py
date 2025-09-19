@@ -211,49 +211,61 @@ class Car:
         )
         surface.blit(coords_text, (300, 300))
         
-    def draw_sensor_rays(self, screen, boundary_mask=None, opponent_mask=None, screen_width=None, screen_height=None):
-        """Draw sensor rays for debugging purposes with boundary collision detection"""
+    def draw_sensor_rays(self, screen, boundary_mask=None, opponent_mask=None, opponent_rect=None, screen_width=None, screen_height=None):
+        """Draw sensor rays for debugging purposes with boundary and opponent collision detection"""
         # Relative sensor angles (relative to car heading)
-        sensor_angles = [-90, -60, -45, -30, -20,10, 0,10,  20,30, 45,60,90]  
+        sensor_angles = [-90, -60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60, 90]  
         max_range = 300  
+        
         # Shift car angle so that 270° (right) becomes 0° forward
         heading = (self.angle - 270) % 360
-
+        
         for sa in sensor_angles:
             # Absolute ray angle in radians
             ray_angle = math.radians((heading) - sa)  # -90 to align sprite starting at 270°
             dx = math.cos(-ray_angle)
             dy = math.sin(-ray_angle)
-
             dist = max_range
+            
             if boundary_mask and screen_width and screen_height:
                 for d in range(1, max_range):  # fine step = pixel precision
                     x = int(self.rect.centerx + dx * d)
                     y = int(self.rect.centery + dy * d)
-
-                    # Out of bounds
+                    
+                    # Out of bounds check
                     if not (0 <= x < screen_width and 0 <= y < screen_height):
                         dist = d
                         break
-
-                    # Boundary collision → check boundary
+                    
+                    # Boundary collision check
                     if boundary_mask.get_at((x, y)) == 1:  # black = wall
                         dist = d
                         break
-                    if opponent_mask and opponent_mask.get_at ((x,y))==1 : #touch opponent
-                        dist=d
-                        break
-
+                    
+                    # Opponent collision check
+                    if opponent_mask and opponent_rect:
+                        # Check if the ray point is within the opponent's rect
+                        if opponent_rect.collidepoint(x, y):
+                            # Convert screen coordinates to opponent's local mask coordinates
+                            local_x = x - opponent_rect.x
+                            local_y = y - opponent_rect.y
+                            
+                            # Make sure the local coordinates are within mask bounds
+                            if (0 <= local_x < opponent_mask.get_size()[0] and 
+                                0 <= local_y < opponent_mask.get_size()[1]):
+                                if opponent_mask.get_at((local_x, local_y)) == 1:
+                                    dist = d
+                                    break
+            
             # End point of ray
             end_x = self.rect.centerx + dx * dist
             end_y = self.rect.centery + dy * dist
             
-
             # Draw the ray (green)
             pygame.draw.line(screen, (0, 255, 0),
                             (int(self.rect.centerx), int(self.rect.centery)),
                             (int(end_x), int(end_y)), 2)
-
+            
             # Draw collision point (red dot)
             pygame.draw.circle(screen, (255, 0, 0),
                             (int(end_x), int(end_y)), 3)

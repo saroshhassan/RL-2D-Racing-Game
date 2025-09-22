@@ -9,6 +9,11 @@ def make_obs(agent, track, width=SCREEN_WIDTH, height=SCREEN_HEIGHT, max_speed=8
     from Car object.
     """
     a = agent
+    dist=a.last_dist_to_target
+    if dist==None:
+        obs_dist=0
+    else:
+        obs_dist=dist    
     n_beams = 13
     obs = [
         (a.rect.centerx / width - 0.5) * 2,
@@ -16,7 +21,8 @@ def make_obs(agent, track, width=SCREEN_WIDTH, height=SCREEN_HEIGHT, max_speed=8
         math.sin(math.radians(a.angle)),
         math.cos(math.radians(a.angle)),
         a.speed / max_speed,
-        agent.timer.get_time() / 100.0  # normalize time
+        a.timer.get_time() / 100.0,  # normalize time
+        obs_dist/1000.0 
     ]
 
     # LIDAR beams

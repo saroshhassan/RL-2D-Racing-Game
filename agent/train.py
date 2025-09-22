@@ -5,7 +5,7 @@ import time
 import sys
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
-from stable_baselines3.common.vec_env import subproc_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.vec_env import VecNormalize
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
@@ -37,6 +37,8 @@ class RaceLoggerCallback(BaseCallback):
                                 "agent_hp", "opponent_hp", "lap_completed", "crashed"])
 
     def _on_step(self) -> bool:
+        """
+        #we dont need to run this code anymore
         if self.num_timesteps % 5 == 0:
             # Access the underlying environment and render it
             try:
@@ -52,7 +54,7 @@ class RaceLoggerCallback(BaseCallback):
                 if self.verbose:
                     print(f"Render failed: {e}")
                     
-                    
+                    """
                     ##^^38-51 render env
         # Get info from the environment
         infos = self.locals.get("infos", [{}])
@@ -103,6 +105,15 @@ class RaceLoggerCallback(BaseCallback):
 # ------------------------
 # Train
 # ------------------------
+
+#def make_subproc_env(rank):
+#    def _init():
+#            env = car_race_env_lidar.CarRaceEnvLidar(render_mode=None)  # turn off human render for speed
+#            env = Monitor(env, filename=None)
+#            env.seed(rank)
+#            return env
+#    return _init
+
 def make_env():
     def _init():
         env = car_race_env_lidar.CarRaceEnvLidar(render_mode="human")
@@ -111,12 +122,26 @@ def make_env():
     return _init
 
 # Wrap in DummyVecEnv
-env = DummyVecEnv([make_env()])
-
+#env = DummyVecEnv([make_env()])
+#Wrap in Subprocenv
 # Apply VecNormalize
-env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_reward=10.0)
+#env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_reward=10.0)
 
 if __name__ == "__main__":
+    
+    def make_subproc_env(rank):
+        def _init():
+                env = car_race_env_lidar.CarRaceEnvLidar(render_mode=None)  # turn off human render for speed
+                env = Monitor(env, filename=None)
+                #env.seed(rank)
+                return env
+        return _init
+    
+    N_ENVS=4
+    env = SubprocVecEnv([make_subproc_env(i) for i in range(N_ENVS)])
+    env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_reward=10.0)
+
+
     print("Starting Car Race AI Training...")
     
     os.makedirs("models", exist_ok=True)
@@ -131,11 +156,11 @@ if __name__ == "__main__":
         env,
         verbose=1,
         batch_size=512,
-        n_steps=4096,
-        learning_rate=3e-4,
+        n_steps=2048,
+        learning_rate=3e-3,
         n_epochs=20,
         
-        ent_coef=0.2,  # Encourage exploration
+        ent_coef=0.3,  # Encourage exploration
         #clip_range=0.2,
         use_sde=True,
         device='cpu',
@@ -145,7 +170,7 @@ if __name__ == "__main__":
 
     # Create callback
     callback = RaceLoggerCallback(
-        save_freq=20000,  # checkpoint every 20k steps
+        save_freq=10000,  # checkpoint every 20k steps
         save_path="models/checkpoints",
         log_path="logs/training_log.csv",
         verbose=1

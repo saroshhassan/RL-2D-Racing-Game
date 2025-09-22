@@ -18,6 +18,7 @@ class Game:
         self.vs_cpu = vs_cpu
         self.twoPlayer=twoPlayer
         self.state="playing"
+        self.total_cp=[(950, 550), (250, 350), (1042, 150)] 
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Car Race")
 
@@ -182,7 +183,21 @@ class Game:
                             lap_time = self.cpu.timer.get_time()
                             log_lap_time("CPU", lap_time)
                             self.state = "game_over"
-
+                            
+                            
+                #__________Progress for obs___________            
+                    dist = self.cpu.calculate(self.total_cp[0])
+                    if self.cpu.last_dist_to_target is None:
+                        self.cpu.last_dist_to_target = dist
+                        
+                    if dist < 30:
+                        self.total_cp.pop(0)
+                        if self.total_cp:
+                            dist=self.cpu.calculate(self.total_cp[0])
+                        else:
+                            dist=0
+                            dist=self.cpu.last_dist_to_target
+                
                 # Health check
                 if self.player.health <= 0 or (self.player2 and self.player2.health <= 0):
                     self.state = "game_over"

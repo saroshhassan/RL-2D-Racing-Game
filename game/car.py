@@ -106,7 +106,7 @@ class Car:
         #font =pygame.font.SysFont("Arial", 30)
         #distance_text=font.render(text,True, color)
         #screen.blit(distance_text, (x, y))
-        self.update()
+        #self.update()
         return distance
     
         

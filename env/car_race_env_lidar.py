@@ -27,7 +27,7 @@ class CarRaceEnvLidar(Env):
         # car_state = [x, y, sin(angle), cos(angle), speed, time_elapsed]
         # lidar: n_beams * 2 → (distance, hit_flag)
         self.n_beams = 13
-        obs_dim = 6 + self.n_beams * 2
+        obs_dim = 7 + self.n_beams * 2
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(obs_dim,), dtype=np.float32)
 
         # Init pygame
@@ -49,7 +49,9 @@ class CarRaceEnvLidar(Env):
         self.total_cp = [(950, 550), (250, 350), (1042, 150)]  # stack of checkpoints
         self.overtaken_cp = []
         self.current_target = self.total_cp[0]
+        self.last_dist_to_target = None
         self.check_finish = False
+        
 
     # -------------------------------
     def reset(self, seed=None, options=None):
@@ -58,10 +60,13 @@ class CarRaceEnvLidar(Env):
         self.agent.health = 100
         if hasattr(self.agent, "timer"):
             self.agent.timer.reset()
+            #debug:vvvvv
+            self.agent.timer.start()
 
         self.total_cp = [(950, 550), (250, 350), (1042, 150)]
         self.overtaken_cp = []
-        self.current_target = self.total_cp[0]
+        self.current_target = None       
+        self.last_dist_to_target=None
         self.check_finish = False
         self.steps = 0
 
@@ -76,8 +81,10 @@ class CarRaceEnvLidar(Env):
             (a.rect.centery / self.height - 0.5) * 2,
             math.sin(math.radians(a.angle)),
             math.cos(math.radians(a.angle)),
-            a.speed / self.max_speed,
-            self.agent.timer.get_time() / 100.0  # normalize time
+            (a.speed / self.max_speed)-.5*2,
+            a.timer.get_time() / 100000.0,  # normalize time
+            float(self.last_dist_to_target or 0.0) / 1000.0    
+        
         ]
         opp_agent=opp_agent
 
@@ -122,7 +129,7 @@ class CarRaceEnvLidar(Env):
             
 
             obs.append(dist / max_range)  # normalized distance
-            obs.append(hit)               # 2=opponent car, 1 = collision boundary, 0 = free
+            obs.append(hit/2)               # 2=opponent car, 1 = collision boundary, 0 = free
         
             
             
@@ -137,7 +144,7 @@ class CarRaceEnvLidar(Env):
        # Apply action
         keys = self._action_to_keys(steer, accel)
         self.agent.move(keys)
-
+        
         reward, done = 0.0, False
         info = {}
 
@@ -145,28 +152,118 @@ class CarRaceEnvLidar(Env):
         lidar_distances, lidar_hits = self._get_lidar_data()
         
         # LIDAR-based navigation rewards
-        lidar_reward = self._calculate_lidar_reward(lidar_distances, lidar_hits, steer)
-        reward += lidar_reward
+        #lidar_reward = self._calculate_lidar_reward(lidar_distances, lidar_hits, steer)
+        collision_reward=self._calculate_collision_reward()
+        #reward += lidar_reward
+        reward+=collision_reward
+        progress_reward=self._calculate_progress_reward()
+        reward+=progress_reward
+        time_penalty=self._calculate_time_penalty()
+        reward+=time_penalty
+        speed_reward=self._calculate_speed_reward()
+        reward+=speed_reward    
+        #survival_reward=self._calculate_survival_reward()
+        #reward+=survival_reward
         
-        # Collision penalty
-        if check_boundary_collision(self.agent, self.track):
-            self.agent.collide()
-            reward -= 100.0  # Increased penalty for hitting walls
-            
-        if check_boundaries(self.agent,self.track) == "start":
-            if self.agent.start_flag==0:
-                self.agent.start_flag=1
-                reward+=10
-            if self.agent.start_flag==1:
-                reward+=0
+        
+         # Finish reward
+        if self.check_finish and not self.total_cp:
+            done = True
+            self.info["lap_completed"] = True
 
+        if self.agent.health <= 0:
+            done = True
+            info["crashed"] = True
+            #self.reset()
+            
+
+        self.steps += 1
+        if self.steps > 2000:
+            done = True
+            info["timeout"] = True
+            
+            
+        if self.steps % 100 == 0:
+            print(f"Step {self.steps}: Reward components - "
+                  #f"Lidar: {lidar_reward:.2f}, 
+                  f"Time: {time_penalty:.2f}, "
+                  f"Progress: {progress_reward:.2f}, "
+                  #Survival: {survival_reward:.2f},
+                  f"Collision: {collision_reward:.2f},"
+                  f"Speed: {speed_reward:.2f}"
+                  f"Total: {reward:.2f}")
+
+        return self._get_obs(), float(reward), bool(done), False, info
+    
+    
+    #------------speed reward
+    def _calculate_speed_reward(self):
+        speed_reward=0
+        
+        # Speed reward (encourage forward movement)
+        if self.agent.speed==0:
+            speed_reward += self.agent.speed -.5
+            
+        if self.agent.speed<0:
+            speed_reward-=self.agent.speed-1
+            
+        else:
+            speed_reward +=(self.agent.speed/self.max_speed)*4
+            
+        
+       
+        
+        return speed_reward
+    
+    def _calculate_survival_reward(self):
+        survival_reward=0
+        
+        if self.agent.health <= 0:
+            survival_reward -= 10.0
+            
+        if self.agent.health>5:
+             # Alive reward
+            survival_reward += 0.001
+            
+        return survival_reward
+            
+        
+    
+    #------------timespent reward
+    
+    def _calculate_time_penalty(self):
+        max_time=100000.0 
+        time_penalty=0
+        
+        if not self.agent.timer.running:
+            time_penalty-=.05
+        
+        if self.agent.timer.running:
+            #timespent reward-incentivize moving faster to get to the finish
+            time_penalty-=0.01
+            
+        return time_penalty
+        
+    #------------get progress reward
+    def _calculate_progress_reward(self):
         # Checkpoint progression (existing code)
+        progress_reward=0
+        self.current_target = self.total_cp[0]
         if self.current_target:
+            
             dist = self.agent.calculate(self.current_target)
-            if dist > 500:
-                reward-=50
-            if dist < 100:
-                reward += 20.0
+            if self.last_dist_to_target is None:
+                self.last_dist_to_target = dist
+            # Calculate reward based on change in distance
+            distance_delta = self.last_dist_to_target - dist
+            progress_reward += distance_delta * 5 # Scale it down
+        
+            self.last_dist_to_target = dist # Update for next step
+                
+                
+
+            if dist < 30:
+                progress_reward+= 5.0
                 self.overtaken_cp.append(self.current_target)
                 self.total_cp.pop(0)
                 if self.total_cp:
@@ -177,37 +274,34 @@ class CarRaceEnvLidar(Env):
 
         # Finish reward
         if self.check_finish and not self.total_cp:
-            reward += 1000.0
-            done = True
-            info["lap_completed"] = True
-
-        # Speed reward (encourage forward movement)
-        if self.agent.speed==0:
-            reward += self.agent.speed -.5
+            progress_reward+= 10.0
             
-        if self.agent.speed<0:
-            reward-=self.agent.speed+1
             
-        else:
-            reward +=(self.agent.speed/self.max_speed)*10
+        return progress_reward
+    
+    #------------get collision reward
+    def _calculate_collision_reward(self):
+        # Collision penalty
+        collision_reward=0
+        if check_boundary_collision(self.agent, self.track):
+            self.agent.collide()
+            collision_reward-= 3.0  # Increased penalty for hitting walls
+            
         
-        # Alive reward
-        reward += 0.001
-        
-
-        if self.agent.health <= 0:
-            reward -= 1000.0
-            done = True
-            info["crashed"] = True
-            #self.reset()
             
-
-        self.steps += 1
-        if self.steps > 2000:
-            done = True
-            info["timeout"] = True
-
-        return self._get_obs(), float(reward), bool(done), False, info
+        if check_boundaries(self.agent,self.track) == "start": #reward to start the game
+            if self.agent.start_flag==0:
+                self.agent.start_flag=1
+                #self.agent.timer.start()
+                collision_reward+=2
+                
+            if self.agent.start_flag==1:
+                collision_reward+=0
+                
+        return collision_reward
+    
+    
+        
     
     #------------get lidar info
     def _get_lidar_data(self,opp_agent=None):
@@ -318,17 +412,18 @@ class CarRaceEnvLidar(Env):
         # -90° → steer left (-1), 0° → straight (0), +90° → steer right (+1)
         target_steer = (target_angle / 90.0)
         
+        
         # Reward for steering towards the best path
         steer_error = abs(steer_action - target_steer)
-        steer_reward = (1.0 - steer_error) * reward_multiplier
+        steer_reward = (1-steer_error) * reward_multiplier
         
         # Bonus for following longer paths
         max_distance = max(distances)
         distance_bonus = (max_distance / 300.0) * 0.5  # normalized distance bonus
         
         # Additional reward for maintaining distance from walls
-        min_side_distance = min(distances[0], distances[-1])  # leftmost and rightmost sensors
-        wall_clearance_reward = (min_side_distance / 300.0) * 5
+        min_side_distance = min(distances[0],distances[1], distances[-2],distances[-1])  # leftmost and rightmost sensors
+        wall_clearance_reward = (min_side_distance / 300.0) * 2
         
         total_reward = steer_reward + distance_bonus + wall_clearance_reward
         
@@ -338,13 +433,13 @@ class CarRaceEnvLidar(Env):
     # -------------------------------
     def _action_to_keys(self, steer, accel):
         keys = {}
-        if accel > 0.1:
+        if accel > 0:
             keys[pygame.K_UP] = True
-        elif accel < -0.1:
+        elif accel < -0.01:
             keys[pygame.K_DOWN] = True
-        if steer < -0.1:
+        if steer < -0.01:
             keys[pygame.K_LEFT] = True
-        elif steer > 0.1:
+        elif steer > 0:
             keys[pygame.K_RIGHT] = True
         return keys
 
@@ -371,6 +466,7 @@ class CarRaceEnvLidar(Env):
 
         # THIS WAS MISSING - UPDATE THE DISPLAY
         if self.render_mode == "human":
+            self.agent.update()
             pygame.display.flip()
             if self.clock:
                 self.clock.tick(30)

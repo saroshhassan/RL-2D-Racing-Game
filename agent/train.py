@@ -11,6 +11,8 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
+
+
 from env import car_race_env_lidar 
 # ------------------------
 # Custom Callback for Logging & Checkpoints
@@ -112,7 +114,7 @@ def make_env():
 env = DummyVecEnv([make_env()])
 
 # Apply VecNormalize
-env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
+env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_reward=10.0)
 
 if __name__ == "__main__":
     print("Starting Car Race AI Training...")
@@ -132,11 +134,13 @@ if __name__ == "__main__":
         n_steps=4096,
         learning_rate=3e-4,
         n_epochs=20,
-        ent_coef=0.5,  # Encourage exploration
-        clip_range=0.2,
+        
+        ent_coef=0.2,  # Encourage exploration
+        #clip_range=0.2,
         use_sde=True,
         device='cpu',
         tensorboard_log="./tb_logs"  # for tensorboard monitoring
+
     )
 
     # Create callback
@@ -148,12 +152,12 @@ if __name__ == "__main__":
     )
 
     print("Starting training...")
-    print(f"Total timesteps: 200,000")
-    print(f"Checkpoints every 50,000 steps")
+    print(f"Total timesteps: {model.n_steps}")
+    print(f"Checkpoints every {callback.save_freq} steps")
     print(f"Logs saved to: logs/training_log.csv")
 
     try:
-        model.learn(total_timesteps=200_000, callback=callback, progress_bar=True)
+        model.learn(total_timesteps=200000, callback=callback, progress_bar=True)
         
         # Save final model
         final_model_path = "models/pyrace_cpu_ppo"

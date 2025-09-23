@@ -162,6 +162,8 @@ class CarRaceEnvLidar(Env):
         reward+=time_penalty
         speed_reward=self._calculate_speed_reward()
         reward+=speed_reward    
+        heading_reward=self._calculate_heading_reward()
+        reward+=heading_reward
         #survival_reward=self._calculate_survival_reward()
         #reward+=survival_reward
         
@@ -170,11 +172,12 @@ class CarRaceEnvLidar(Env):
         if self.check_finish and not self.total_cp:
             done = True
             self.info["lap_completed"] = True
+            self.reset()
 
         if self.agent.health <= 0:
             done = True
             info["crashed"] = True
-            #self.reset()
+            self.reset()
             
 
         self.steps += 1
@@ -191,11 +194,50 @@ class CarRaceEnvLidar(Env):
                   #Survival: {survival_reward:.2f},
                   f"Collision: {collision_reward:.2f},"
                   f"Speed: {speed_reward:.2f}"
+                  f"Heading :{heading_reward:2f},"
                   f"Total: {reward:.2f}")
 
         return self._get_obs(), float(reward), bool(done), False, info
     
-    
+    #--------------heading reward
+    def _calculate_heading_reward(self):
+        # In step():
+        """
+        Proof for heading angle:
+        CP at (x,y), car at (cx,cy)
+        Δx=x-cx
+        Δy=y-cy
+        tanθ=(Δx/Δy), but
+        in PyGame y axis in inverted
+        therefore
+        -(y-cy)=cy-y
+        Δy=cy-y
+        tanθ=Δx/Δy
+        heading θ= arctan 2(Δy,Δx)
+        
+        car at θ₁
+        heading at θ₂
+        
+        θ₂-θ₁= angle to steer towards
+        
+        if θ₁ = n rad and θ₂=0 rad (CP lies on line from (cx,cy) to (x,y))
+        θ₂-θ₁=(n+π)/2π -> maintains within circle
+        
+              
+        
+        """
+        target_dx = self.current_target[0] - self.agent.rect.centerx
+        target_dy = self.current_target[1] - self.agent.rect.centery
+        target_angle = math.atan2(-target_dy, target_dx)  # careful with pygame's y-axis
+
+        car_angle_rad = math.radians(self.agent.angle)
+        heading_diff = abs((target_angle - car_angle_rad + np.pi) % (2*np.pi) - np.pi)
+
+        heading_reward = (1 - heading_diff / np.pi) * 2.0  # normalized, max at facing target
+        
+        
+        return heading_reward
+
     #------------speed reward
     def _calculate_speed_reward(self):
         speed_reward=0

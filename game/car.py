@@ -12,7 +12,7 @@ class Car:
         self.width = width
         self.height = height
         self.is_cpu = is_cpu
-        self.health = 1000
+        self.health = 100
         self.speed = 0
         self.max_speed = 10
         self.acceleration = 0.2
@@ -29,6 +29,7 @@ class Car:
         self.distance=0
         self.start_flag=0
         self.last_dist_to_target=None
+        
         
         if image_path:
             self.base_image = pygame.image.load(image_path).convert_alpha()
@@ -66,11 +67,15 @@ class Car:
 
     def turn_left(self):
         if self.speed != 0:
-            self.angle += 4
+            #self.angle += 4
+            self.angle += self.speed/self.max_speed * 5 # instead of hard ±4
+
 
     def turn_right(self):
         if self.speed != 0:
-            self.angle -= 4
+            #self.angle -= 4
+             self.angle -= self.speed/self.max_speed * 5  # instead of hard ±4
+
 
     def update(self):
         # Convert angle to radians
@@ -179,9 +184,9 @@ class Car:
 
         # Steering
         if steer < -0.1:
-            self.turn_left()
+            self.angle += steer * 4
         elif steer > 0.1:
-            self.turn_right()
+            self.angle += steer * 4
 
         # Update car physics
         self.update()

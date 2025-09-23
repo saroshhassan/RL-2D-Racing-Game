@@ -27,7 +27,7 @@ class CarRaceEnvLidar(Env):
         # car_state = [x, y, sin(angle), cos(angle), speed, time_elapsed]
         # lidar: n_beams * 2 → (distance, hit_flag)
         self.n_beams = 13
-        obs_dim = 7 + self.n_beams * 2
+        obs_dim = 8 + self.n_beams * 2
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(obs_dim,), dtype=np.float32)
 
         # Init pygame
@@ -83,7 +83,8 @@ class CarRaceEnvLidar(Env):
             math.cos(math.radians(a.angle)),
             (a.speed / self.max_speed)-.5*2,
             a.timer.get_time() / 100000.0,  # normalize time
-            float(self.last_dist_to_target or 0.0) / 1000.0    
+            float(self.last_dist_to_target or 0.0) / 1000.0,
+            a.heading_diff/(2*math.pi) #normalize by 2pi
         
         ]
         opp_agent=opp_agent
@@ -199,8 +200,7 @@ class CarRaceEnvLidar(Env):
 
         return self._get_obs(), float(reward), bool(done), False, info
     
-    #--------------heading reward
-    def _calculate_heading_reward(self):
+    def _calculate_heading(self):
         # In step():
         """
         Proof for heading angle:
@@ -232,8 +232,16 @@ class CarRaceEnvLidar(Env):
 
         car_angle_rad = math.radians(self.agent.angle)
         heading_diff = abs((target_angle - car_angle_rad + np.pi) % (2*np.pi) - np.pi)
+        self.agent.heading_diff=heading_diff
+        
+        
+        return heading_diff
 
-        heading_reward = (1 - heading_diff / np.pi) * 2.0  # normalized, max at facing target
+    
+    #--------------heading reward
+    def _calculate_heading_reward(self):
+        
+        heading_reward = (1 -self._calculate_heading() / np.pi) * 2.0  # normalized, max at facing target
         
         
         return heading_reward

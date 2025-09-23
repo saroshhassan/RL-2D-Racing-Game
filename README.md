@@ -32,8 +32,8 @@ To get your game running:
 
 ```bash
 git clone https://github.com/your-username/RL-2D-Racing-Game.git
-cd RL-2D-Racing-Game
 
+cd RL-2D-Racing-Game
 
 pip install -r requirements.txt
 

@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
     # Create callback
     callback = RaceLoggerCallback(
-        save_freq=10000,  # checkpoint every 20k steps
+        save_freq=100000,  # checkpoint every 20k steps
         save_path="models/checkpoints",
         log_path="logs/training_log.csv",
         verbose=1
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     print(f"Logs saved to: logs/training_log.csv")
 
     try:
-        model.learn(total_timesteps=200000, callback=callback, progress_bar=True)
+        model.learn(total_timesteps=10000000, callback=callback, progress_bar=True)
         
         # Save final model
         final_model_path = "models/pyrace_cpu_ppo"

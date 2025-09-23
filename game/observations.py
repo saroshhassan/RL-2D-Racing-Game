@@ -23,7 +23,6 @@ def make_obs(agent, track, width=SCREEN_WIDTH, height=SCREEN_HEIGHT, max_speed=8
         a.speed / max_speed,
         a.timer.get_time() / 100.0,  # normalize time
         obs_dist/1000.0,
-        float(a.heading_diff) / (2 * math.pi)  
     ]
 
     # LIDAR beams

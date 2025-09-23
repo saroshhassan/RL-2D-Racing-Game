@@ -27,7 +27,7 @@ class CarRaceEnvLidar(Env):
         # car_state = [x, y, sin(angle), cos(angle), speed, time_elapsed]
         # lidar: n_beams * 2 → (distance, hit_flag)
         self.n_beams = 13
-        obs_dim = 8 + self.n_beams * 2
+        obs_dim = 7 + self.n_beams * 2
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(obs_dim,), dtype=np.float32)
 
         # Init pygame
@@ -65,8 +65,8 @@ class CarRaceEnvLidar(Env):
 
         self.total_cp = [(950, 550), (250, 350), (1042, 150)]
         self.overtaken_cp = []
-        self.current_target = None       
-        self.last_dist_to_target=None
+        self.current_target = self.total_cp[0]       
+        self.last_dist_to_target=self.agent.calculate(self.current_target)
         self.check_finish = False
         self.steps = 0
 
@@ -76,15 +76,15 @@ class CarRaceEnvLidar(Env):
     def _get_obs(self,opp_agent=None):
         """Return state vector: [car state + lidar]"""
         a = self.agent
+        
         obs = [
             (a.rect.centerx / self.width - 0.5) * 2,
             (a.rect.centery / self.height - 0.5) * 2,
             math.sin(math.radians(a.angle)),
             math.cos(math.radians(a.angle)),
-            (a.speed / self.max_speed)-.5*2,
+            (a.speed / self.max_speed)-1,
             a.timer.get_time() / 100000.0,  # normalize time
-            float(self.last_dist_to_target or 0.0) / 1000.0,
-            float(a.heading_diff) / (2 * math.pi) 
+            float(self.last_dist_to_target or 0.0) / 1000.0
         
         ]
         opp_agent=opp_agent
@@ -173,12 +173,12 @@ class CarRaceEnvLidar(Env):
         if self.check_finish and not self.total_cp:
             done = True
             self.info["lap_completed"] = True
-            self.reset()
+            #self.reset()
 
         if self.agent.health <= 0:
             done = True
             info["crashed"] = True
-            self.reset()
+            #self.reset()
             
 
         self.steps += 1
@@ -228,20 +228,27 @@ class CarRaceEnvLidar(Env):
         """
         target_dx = self.current_target[0] - self.agent.rect.centerx
         target_dy = self.current_target[1] - self.agent.rect.centery
+         # Add safety check for zero distance
+        if abs(target_dx) < 1e-6 and abs(target_dy) < 1e-6:
+            return 0.0, 0.0
         target_angle = math.atan2(-target_dy, target_dx)  # careful with pygame's y-axis
 
         car_angle_rad = math.radians(self.agent.angle)
         heading_diff = abs((target_angle - car_angle_rad + np.pi) % (2*np.pi) - np.pi)
+        raw_diff = (target_angle - car_angle_rad + np.pi) % (2*np.pi) - np.pi
+        heading_diff_norm = raw_diff / np.pi
+
+
         self.agent.heading_diff=heading_diff
         
         
-        return heading_diff
+        return heading_diff,heading_diff_norm
 
     
     #--------------heading reward
     def _calculate_heading_reward(self):
         
-        heading_reward = (1 -self._calculate_heading() / np.pi) * 2.0  # normalized, max at facing target
+        heading_reward = (1 -self._calculate_heading()[0] / np.pi) * 0.5  # normalized, max at facing target
         
         
         return heading_reward
@@ -258,7 +265,7 @@ class CarRaceEnvLidar(Env):
             speed_reward-=self.agent.speed-1
             
         else:
-            speed_reward +=(self.agent.speed/self.max_speed)*4
+            speed_reward +=(self.agent.speed/self.max_speed)*2
             
         
        
@@ -271,7 +278,7 @@ class CarRaceEnvLidar(Env):
         if self.agent.health <= 0:
             survival_reward -= 10.0
             
-        if self.agent.health>5:
+        if self.agent.health>85:
              # Alive reward
             survival_reward += 0.001
             
@@ -284,6 +291,8 @@ class CarRaceEnvLidar(Env):
     def _calculate_time_penalty(self):
         max_time=100000.0 
         time_penalty=0
+        
+        
         
         if not self.agent.timer.running:
             time_penalty-=.05

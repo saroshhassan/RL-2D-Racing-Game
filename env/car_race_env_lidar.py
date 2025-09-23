@@ -84,7 +84,7 @@ class CarRaceEnvLidar(Env):
             (a.speed / self.max_speed)-.5*2,
             a.timer.get_time() / 100000.0,  # normalize time
             float(self.last_dist_to_target or 0.0) / 1000.0,
-            a.heading_diff/(2*math.pi) #normalize by 2pi
+            float(a.heading_diff) / (2 * math.pi) 
         
         ]
         opp_agent=opp_agent
